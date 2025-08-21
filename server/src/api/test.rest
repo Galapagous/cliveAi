@@ -1,0 +1,19 @@
+GET http://localhost:3001/api/accounts
+
+
+###
+GET http://localhost:3001/api/accounts/1
+
+
+
+###
+POST http://localhost:3001/api/accounts/10/transactions
+content-type: application/json
+
+{
+   "type": "DEPOSIT",
+
+    "amount": 2000,
+
+    "description": "This is just a test"
+}
