@@ -25,3 +25,14 @@
   margin: 0.5rem 0;
   color: #666;
 }
+
+.table {
+  color: black;
+
+  tr {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 150px;
+  }
+}

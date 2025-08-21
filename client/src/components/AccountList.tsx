@@ -24,34 +24,30 @@
  */
 
 import { useState, useEffect } from "react";
-import { Account, Transaction } from "../types";
+import { Account } from "../types";
 import { getAccounts, getTransactions } from "../api";
 import styles from "./AccountList.module.css";
+import { getTableData } from "./data";
 
 export function AccountList() {
+  // Basic state management - Consider using more robust state management for larger applications
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [transactions, setTransactions] = useState<
-    Record<string, Transaction[]>
-  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewItem, setViewItem] = useState<boolean>(false);
+  const [activeTrasaction, setActiveTransaction] = useState<Account | null>(
+    null
+  );
+  const [accountsWithTransactions, setAccountsWithTransactions] = useState<
+    null | any
+  >(null);
 
+  // Data fetching - Consider implementing retry logic, caching, and better error handling
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAccounts = async () => {
       try {
         const data = await getAccounts();
         setAccounts(data);
-
-        // Fetch transactions for each account
-        const txs: Record<string, Transaction[]> = {};
-        for (const account of data) {
-          try {
-            txs[account.id] = await getTransactions(account.id);
-          } catch {
-            txs[account.id] = [];
-          }
-        }
-        setTransactions(txs);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
@@ -59,11 +55,50 @@ export function AccountList() {
       }
     };
 
-    fetchData();
+    fetchAccounts();
   }, []);
 
+  useEffect(() => {
+    if (!accounts) return;
+
+    const fetchAccounts = async () => {
+      try {
+        const results = await Promise.all(
+          accounts.map(async (account) => {
+            const transactions = await getTransactions(account.id);
+            return {
+              ...account,
+              transactions,
+            };
+          })
+        );
+
+        // ⬅️ update state with merged accounts + transactions
+        setAccountsWithTransactions(results);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAccounts();
+  }, [accounts]);
+
+  // Basic loading and error states - Consider implementing skeleton loading and error boundaries
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
+
+  // Basic render logic - Consider implementing:
+  // - Sorting and filtering
+  // - Pagination
+  // - Search functionality
+  // - More interactive features
+  // - Accessibility improvements
+
+  const handleViewTransaction = (id: string) => {
+    setViewItem(true);
+  };
 
   return (
     <div className={styles.container}>
@@ -75,54 +110,45 @@ export function AccountList() {
             <p>Account Number: {account.accountNumber}</p>
             <p>Type: {account.accountType}</p>
             <p>Balance: ${account.balance.toFixed(2)}</p>
-
-            <h4>Recent Transactions</h4>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(transactions[account.id] || []).map((tx) => (
-                  <tr key={tx.id}>
-                    <td>{new Date(tx.date).toLocaleDateString()}</td>
-                    <td>
-                      <span
-                        className={
-                          tx.type === "DEPOSIT"
-                            ? styles.deposit
-                            : tx.type === "WITHDRAWAL"
-                            ? styles.withdrawal
-                            : styles.transfer
-                        }
-                      >
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td>{tx.description}</td>
-                    <td
-                      style={{
-                        color:
-                          tx.type === "WITHDRAWAL" || tx.type === "TRANSFER"
-                            ? "red"
-                            : "green",
-                      }}
-                    >
-                      {tx.type === "WITHDRAWAL" || tx.type === "TRANSFER"
-                        ? `- $${tx.amount}`
-                        : `+ $${tx.amount}`}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <button onClick={() => handleViewTransaction(account?.id)}>
+              View Transaction
+            </button>
           </div>
         ))}
       </div>
+      {/* transaction list */}
+      <section className={styles.table}>
+        <h1>Table</h1>
+        <table>
+          <thead>
+            <tr>
+              <th>S/N</th>
+              <th>Type</th>
+              <th>Desc</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {getTableData(accountsWithTransactions)?.map(
+              (tableData: any, index: number) => (
+                <tr>
+                  <td>{index + 1}</td>
+                  <td>{tableData?.accountType}</td>
+                  <td>{tableData?.description}</td>
+                  <td>{tableData?.amount}</td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </section>
+      {/* new transaction */}
+      {viewItem && (
+        <div>
+          <h1>Trasaction Details</h1>
+          <div></div>
+        </div>
+      )}
     </div>
   );
 }

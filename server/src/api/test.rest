@@ -7,7 +7,12 @@ GET http://localhost:3001/api/accounts/1
 
 
 ###
-POST http://localhost:3001/api/accounts/10/transactions
+GET http://localhost:3001/api/accounts/1/transactions?page=1&limit=2
+
+
+
+###
+POST http://localhost:3001/api/accounts/1/transactions
 content-type: application/json
 
 {
